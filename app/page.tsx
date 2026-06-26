@@ -58,21 +58,6 @@ export default function Page() {
     });
   }
 
-  // Hero email box: a real join. On success, drop the user at the #join section so they see the
-  // confirmation (the full form there flips to the "You are on the list" state).
-  async function handleHeroSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const input = e.currentTarget.querySelector<HTMLInputElement>('input[type="email"]');
-    const email = (input?.value ?? "").trim();
-    if (!isEmail(email)) {
-      input?.focus();
-      if (input) input.style.borderColor = "#0BA77E";
-      return;
-    }
-    const ok = await submitJoin(email, { source: "hero" });
-    if (ok) document.getElementById("join")?.scrollIntoView({ behavior: "smooth" });
-  }
-
   // Scroll-reveal, count-up stats, and the rotating live-bid card — ported verbatim from the original
   // landing page's vanilla script, run once on mount and cleaned up on unmount.
   useEffect(() => {
@@ -307,10 +292,7 @@ export default function Page() {
           </p>
           <div className="hero-lower">
             <div className="hero-lower-l">
-              <form className="hero-form reveal d3" onSubmit={handleHeroSubmit}>
-                <input className="field" type="email" name="email" placeholder="Enter your email" aria-label="Email" required />
-                <button className="btn" type="submit" disabled={loading}>Get early access</button>
-              </form>
+              <a className="btn btn-hero reveal d3" href="#join">Get early access</a>
               <p className="hero-note reveal d3">
                 <svg viewBox="0 0 24 24" fill="none">
                   <path d="M12 2l2.4 6.9H22l-6 4.5 2.3 7L12 16l-6.3 4.4 2.3-7-6-4.5h7.6z" fill="currentColor" />

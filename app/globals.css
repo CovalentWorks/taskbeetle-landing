@@ -218,3 +218,5 @@ footer{background:var(--pine);color:#7C9B8E;padding:46px 0 40px;border-top:1px s
   .foot-col-r{text-align:right}
   .foot-col-r .foot-links{justify-content:flex-end}
 }
+
+.btn-hero{padding:16px 32px;font-size:16px}
