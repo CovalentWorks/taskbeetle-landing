@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8081/taskbeetle-api";
+// Defaults to the production API so the deployed site works without env config; override with
+// NEXT_PUBLIC_API_BASE_URL for local dev (e.g. http://localhost:8081/taskbeetle-api).
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.taskbeetle.com/taskbeetle-api";
 
 const CHECK = (
   <svg viewBox="0 0 24 24" fill="none">
@@ -16,39 +18,59 @@ export default function Page() {
   const [error, setError] = useState<string | null>(null);
   const emailRef = useRef<HTMLInputElement>(null);
 
-  async function handleWaitSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const form = e.currentTarget;
-    const data = new FormData(form);
-    const email = String(data.get("email") || "").trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      emailRef.current?.focus();
-      if (emailRef.current) emailRef.current.style.borderColor = "#0BA77E";
-      return;
-    }
+  const isEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
+  // The one place the waitlist POST happens — shared by the hero box and the full form below.
+  async function submitJoin(email: string, metadata: Record<string, string>): Promise<boolean> {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(`${API_BASE}/v1/waitlist`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          metadata: {
-            role: String(data.get("role") || ""),
-            location: String(data.get("location") || ""),
-            work: String(data.get("work") || ""),
-            source: "waitlist-landing",
-          },
-        }),
+        body: JSON.stringify({ email, metadata }),
       });
       if (!res.ok) throw new Error(`waitlist responded ${res.status}`);
       setSubmitted(true);
-    } catch (err) {
+      return true;
+    } catch {
       setError("Something went wrong. Please try again.");
+      return false;
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleWaitSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const data = new FormData(e.currentTarget);
+    const email = String(data.get("email") || "").trim();
+    if (!isEmail(email)) {
+      emailRef.current?.focus();
+      if (emailRef.current) emailRef.current.style.borderColor = "#0BA77E";
+      return;
+    }
+    await submitJoin(email, {
+      role: String(data.get("role") || ""),
+      location: String(data.get("location") || ""),
+      work: String(data.get("work") || ""),
+      source: "waitlist-landing",
+    });
+  }
+
+  // Hero email box: a real join. On success, drop the user at the #join section so they see the
+  // confirmation (the full form there flips to the "You are on the list" state).
+  async function handleHeroSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const input = e.currentTarget.querySelector<HTMLInputElement>('input[type="email"]');
+    const email = (input?.value ?? "").trim();
+    if (!isEmail(email)) {
+      input?.focus();
+      if (input) input.style.borderColor = "#0BA77E";
+      return;
+    }
+    const ok = await submitJoin(email, { source: "hero" });
+    if (ok) document.getElementById("join")?.scrollIntoView({ behavior: "smooth" });
   }
 
   // Scroll-reveal, count-up stats, and the rotating live-bid card — ported verbatim from the original
@@ -285,9 +307,9 @@ export default function Page() {
           </p>
           <div className="hero-lower">
             <div className="hero-lower-l">
-              <form className="hero-form reveal d3" onSubmit={(e) => e.preventDefault()}>
-                <input className="field" type="email" placeholder="Enter your email" aria-label="Email" />
-                <button className="btn" type="submit">Get early access</button>
+              <form className="hero-form reveal d3" onSubmit={handleHeroSubmit}>
+                <input className="field" type="email" name="email" placeholder="Enter your email" aria-label="Email" required />
+                <button className="btn" type="submit" disabled={loading}>Get early access</button>
               </form>
               <p className="hero-note reveal d3">
                 <svg viewBox="0 0 24 24" fill="none">
